@@ -1,9 +1,24 @@
 import jscatter as js
 import numpy as np
 
+FILENAMES_TO_OPEN = [
+    'Liposomes (30mW 1.5mL undiluted)',
+    'Liposomes (40mW 1.5mL 1-1 diluted)',
+    'Liposomes (60mW 2.25mL 1-2 diluted)',
+    'Liposomes (60mW 3mL 1-3 diluted)',
+    'Liposomes (60mW 3.75mL 1-4 diluted)',
+    'Liposomes (100mW 1.65mL 1-9 diluted)',
+    'Liposomes (200mW 3.3mL 1-19 diluted)',
+    'Liposomes (200mW 4.1mL 1-24 diluted)'
+]
+
 FILENAME_PATH = 'data/'
-FILENAME_TO_OPEN = 'Liposomes (200mW 4.1mL 1-24 diluted)'
-FILENAME_EXTENSION = '.SIN'
+FILENAME_SIN_EXTENSION = '.SIN'
+FILENAME_CSV_EXTENSION = '.csv'
+CLEANED = ' (cleaned)'
+G1_VS_GAMMA = ' (g1 vs gamma)'
+G1_VS_TAU = ' (g1 vs tau)'
+
 
 NOISEY_LINES = 100  # Noisey lines of data at start of text file
 
@@ -11,8 +26,8 @@ search_text_start = '[CorrelationFunction]\n'
 search_text_end = '\n[RawCorrelationFunction]'
 
 
-def read_correlator_text_file():
-    with open(FILENAME_PATH + FILENAME_TO_OPEN + FILENAME_EXTENSION, 'r') as file:
+def read_correlator_text_file(filename):
+    with open(filename, 'r') as file:
         return file.read()
 
 
@@ -27,7 +42,6 @@ def average_two_data_columns(text):
     noisey_data_delete_line_counter = 0
 
     line = text.split('\n')  # Split into lines using \n
-    print(line)
     for l in line:
 
         if (noisey_data_delete_line_counter < NOISEY_LINES):
@@ -57,8 +71,8 @@ def average_two_data_columns(text):
     return averaged_data
 
 
-def write_modified_correlator_text_file(text):
-    with open(FILENAME_PATH + FILENAME_TO_OPEN + '(cleaned)' + FILENAME_EXTENSION, 'w') as file:
+def write_cleaned_correlator_text_file(filename, text):
+    with open(filename, 'w') as file:
         file.write(text)
 
 
@@ -70,7 +84,7 @@ def do_contin_fitting(text):
     print(np.sin(np.pi/2))
     noise = 0.0001  # typical < 1e-3
     #data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
-    data = js.dA('data/output.txt')
+    data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
     # add attributes to overwrite defaults
     data.Angle = 90  # scattering angle in degrees
     data.Temperature = 293  # Temperature of measurement  in K
@@ -82,8 +96,6 @@ def do_contin_fitting(text):
 
     #print(dr.contin_bestFit[0].ipeaks)  # contains the 11 contin_bestFit.peaks results, but in three lists???
 
-    print(dr.X)
-
     #print(dr[0].contin_bestFit)
     #print(dr[0].contin_bestFit.ipeaks_name)
 
@@ -91,42 +103,44 @@ def do_contin_fitting(text):
     return dr
 
 
-def write_g1_vs_gamma_plot_data(x_data, y_data):
+def write_g1_vs_gamma_plot_data(filename, x_data, y_data):
     csv_to_write = 'gamma, g1\n'
 
-    length = len(x_data)
-
-    for l in range(0, length - 1):
-        csv_to_write += str(x_data[l])
+    for r in range(len(x_data)):
+        csv_to_write += str(x_data[r])
         csv_to_write += ','
-        csv_to_write += str(y_data[l])
+        csv_to_write += str(y_data[r])
         csv_to_write += '\n'
 
-    with open(FILENAME_PATH + FILENAME_TO_OPEN + '(g1 vs gamma).csv', 'w') as file:
+    with open(filename, 'w') as file:
         file.write(csv_to_write)
 
 
-def write_g1_vs_tau_plot_data(x_data, y_data):
+def write_g1_vs_tau_plot_data(filename, dr0):
     csv_to_write = 'tau, g1\n'
 
-    length = len(x_data)
+    x_data = dr0[0]
+    y_data = dr0[1]
 
-    for l in range(0, length - 1):
-        csv_to_write += str(x_data[l])
+    for r in range(len(x_data)):
+        csv_to_write += str(x_data[r])
         csv_to_write += ','
-        csv_to_write += str(y_data[l])
+        csv_to_write += str(y_data[r])
         csv_to_write += '\n'
 
-    with open(FILENAME_PATH + FILENAME_TO_OPEN + '(g1 vs tau).csv', 'w') as file:
+    with open(filename, 'w') as file:
         file.write(csv_to_write)
 
 
 if __name__ == '__main__':
-    file_text = read_correlator_text_file()
-    new_text = trim_correlator_text_file(file_text)
-    new_text = average_two_data_columns(new_text)
-    write_modified_correlator_text_file(new_text)
 
-    dr = do_contin_fitting(new_text)
-    write_g1_vs_gamma_plot_data(dr.contin_bestFit[0].X, dr.contin_bestFit[0].Y)
-    write_g1_vs_tau_plot_data(dr.X, dr.Y)
+    for filename_to_open in FILENAMES_TO_OPEN:
+
+        file_text = read_correlator_text_file(FILENAME_PATH + filename_to_open + FILENAME_SIN_EXTENSION)
+        new_text = trim_correlator_text_file(file_text)
+        new_text = average_two_data_columns(new_text)
+        write_cleaned_correlator_text_file(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION, new_text)
+
+        dr = do_contin_fitting(new_text)
+        write_g1_vs_gamma_plot_data(FILENAME_PATH + filename_to_open + G1_VS_GAMMA + FILENAME_CSV_EXTENSION, dr.contin_bestFit[0].X, dr.contin_bestFit[0].Y)
+        write_g1_vs_tau_plot_data(FILENAME_PATH + filename_to_open + G1_VS_TAU + FILENAME_CSV_EXTENSION, dr[0])
