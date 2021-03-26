@@ -7,8 +7,7 @@ Some demo .SIN files are included.
 
 I could not get Jscatter to work on Mac or Windows, but the code runs nicely on Ubuntu 20.
 
-# Installing on ubuntu
-
+# Installing Jscatter on Ubuntu
 ```
 mkdir Github
 cd Github/
