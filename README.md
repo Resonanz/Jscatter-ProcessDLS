@@ -1,4 +1,4 @@
-# ProcessDLS
+# Jscatter ProcessDLS
 We use a pair of www.correlator.com correlators to capture speckle data from samples.
 
 This code uses JScatter and CONTIN to (batch) process the www.correlator.com .SIN files.
