@@ -154,6 +154,12 @@ def write_intensity_weight_plot_data(filename, Rh_data, prob_intensity_weight_da
         file.write(csv_to_write)
 
 
+class DLSExptsClass:
+
+    expt_name = ''
+    Rh_nm = 0.0
+
+
 if __name__ == '__main__':
 
     for filename_to_open in FILENAMES_TO_OPEN:
@@ -197,3 +203,13 @@ if __name__ == '__main__':
 
         plt.savefig(FILENAME_PATH + filename_to_open + PRH_RH + ".pdf")
         plt.show()
+
+        dict_objects = {}
+
+        dict_objects['name1'] = DLSExptsClass()
+        DLSExptsClass.expt_name = "my experiment"
+        DLSExptsClass.Rh_nm = 52.5
+
+        print(dict_objects['name1'].expt_name)
+        print(dict_objects['name1'].Rh_nm)
+
