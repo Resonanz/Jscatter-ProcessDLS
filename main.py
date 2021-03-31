@@ -3,6 +3,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
+LASER_WAVELENGTH = 632 #530
+
 FILENAMES_TO_OPEN = [
     'Liposomes (30mW 1.5mL undiluted)'#,
    # 'Liposomes (40mW 1.5mL 1-1 diluted)',
@@ -83,20 +85,20 @@ def write_cleaned_correlator_text_file(filename, text):
 This next block of code is mostly lifted from the Jscatter demo code DLS example.
 '''
 def do_contin_fitting(text):
-    #t = js.loglist(1, 10000, 1000)  # times in microseconds
-    #q = 4 * np.pi / 1.333 / 632 * np.sin(np.pi / 2)  # 90 degrees for 632 nm , unit is 1/nm**2
-    #D = 0.05 * 1000  # nm**2/ns * 1000 = units nm**2/microseconds
-    #gamma = q*q*D
+    t = js.loglist(1, 10000, 1000)  # times in microseconds
+    q = 4 * np.pi / 1.333 / LASER_WAVELENGTH * np.sin(np.pi / 2)  # 90 degrees for 632 nm , unit is 1/nm**2
+    D = 0.05 * 1000  # nm**2/ns * 1000 = units nm**2/microseconds
+    gamma = q*q*D
     #print(np.sin(np.pi/2))
-    #noise = 0.0001  # typical < 1e-3
-    #data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
-    data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
+    noise = 0.0001  # typical < 1e-3
+    data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
+    #data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
     # add attributes to overwrite defaults
     data.Angle = 90  # scattering angle in degrees
     data.Temperature = 293  # Temperature of measurement  in K
     data.Viscosity = 1  # viscosity cPoise
     data.Refractive = 1.333  # refractive index
-    data.Wavelength = 530  #632  # wavelength
+    data.Wavelength = LASER_WAVELENGTH
     # do CONTIN
     dr = js.dls.contin(data, distribution='x')  # also use r
 
@@ -157,7 +159,23 @@ def write_intensity_weight_plot_data(filename, Rh_data, prob_intensity_weight_da
 class DLSExptsClass:
 
     expt_name = ''
+    weight = 0.0
+    mean = 0.0
+    std = 0.0
+    mean_err = 0.0
+    imean = 0.0
+    mean_Deff = 0.0
+    Rh_cm = 0.0
+    wavevector = 0.0
+    mean_Deff_nmns = 0.0
     Rh_nm = 0.0
+    wavevector_nm = 0.0
+    bf1 = []
+    bf3 = []
+    bf4 = []
+    bf5 = []
+    bfX = []            # relaxation time distribution
+    bfY = []            # relaxation time distribution
 
 
 if __name__ == '__main__':
@@ -182,34 +200,64 @@ if __name__ == '__main__':
         print(dr[0].contin_bestFit.ipeaks)
         print(dr[0].contin_bestFit.ipeaks[0,2]/dr[0].contin_bestFit.ipeaks[0,1])
 
-        # generate random data for plotting
-        x = np.linspace(0.0,100,20)
 
-        # now there's 3 sets of points
-        y1 = np.random.normal(scale=0.2,size=20)
-        y2 = np.random.normal(scale=0.5,size=20)
-        y3 = np.random.normal(scale=0.8,size=20)
+        # Create a dictionary of objects to store class instances
+        # Key = experiment name
+        # Value = class instance 
+        dict_objects = {}
+
+        # Add data from Jscatter output into the storage class instance 
+        dict_objects[filename_to_open] = DLSExptsClass()  # Create class instance
+        DLSExptsClass.weight = dr[0].contin_bestFit.ipeaks[0,0]            # weight peak weight
+        DLSExptsClass.mean = dr[0].contin_bestFit.ipeaks[0,1]              # mean peak mean
+        DLSExptsClass.std = dr[0].contin_bestFit.ipeaks[0,2]               # std peak standard deviation
+        DLSExptsClass.mean_err = dr[0].contin_bestFit.ipeaks[0,3]          # mean_err error of mean
+        DLSExptsClass.imean = dr[0].contin_bestFit.ipeaks[0,4]             # imean index of peak mean
+        DLSExptsClass.mean_Deff = dr[0].contin_bestFit.ipeaks[0,5]         # 1/(q**2*mean) diffusion constant in cm**2/s
+        DLSExptsClass.Rh_cm = dr[0].contin_bestFit.ipeaks[0,6]             # Rh hydrodynamic radius in cm
+        DLSExptsClass.wavevector = dr[0].contin_bestFit.ipeaks[0,7]        # q wavevector in 1/cm
+        DLSExptsClass.mean_Deff_nmns = dr[0].contin_bestFit.ipeaks[0,8]    # 1/(q**2*mean) diffusion constant in nm**2/ns
+        DLSExptsClass.Rh_nm = dr[0].contin_bestFit.ipeaks[0,9]             # Rh hydrodynamic radius in nm
+        DLSExptsClass.wavevector_nm = dr[0].contin_bestFit.ipeaks[0,10]    # q wavevector in 1/nm
+        DLSExptsClass.expt_name = filename_to_open
+        DLSExptsClass.bf1 = bf[1]
+        DLSExptsClass.bf3 = bf[3]
+        DLSExptsClass.bf4 = bf[4]
+        DLSExptsClass.bf5 = bf[5]
+        DLSExptsClass.bfX = bf.X
+        DLSExptsClass.bfY = bf.Y
+
+
+        # Get data from Jscatter
+        x = dict_objects[filename_to_open].bf3  # 
+        y1 = dict_objects[filename_to_open].bf1 # intensity weight
+        y2 = dict_objects[filename_to_open].bf4 # mass weight
+        y3 = dict_objects[filename_to_open].bf5 # number weight
+
+        # Convert from lists to to numpy arrays for plotting 
+        x = np.asarray(x, dtype=np.float64)
+        y1 = np.asarray(y1, dtype=np.float64)
+        y2 = np.asarray(y2, dtype=np.float64)
+        y3 = np.asarray(y3, dtype=np.float64)
+        
+        plt.xscale('log', base=10)
 
         # plot the 3 sets
-        plt.plot(x,y1,label='plot 1')
-        plt.plot(x,y2, label='plot 2')
-        plt.plot(x,y3, label='plot 3')
+        plt.plot(x,y1, label='Intensity weight')
+        plt.plot(x,y2, label='Mass weight')
+        plt.plot(x,y3, label='Number weight')
 
-        plt.xlabel("Living Area Above Ground")
-        plt.ylabel("House Price")
+        plt.title(filename_to_open)
+        plt.xlabel("Rh")
+        plt.ylabel("P(Rh)")
+
+        # Create empty plot with blank marker containing the extra label
+        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
+        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_cm))
+        #plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
 
         # call with no parameters
         plt.legend()
 
         plt.savefig(FILENAME_PATH + filename_to_open + PRH_RH + ".pdf")
         plt.show()
-
-        dict_objects = {}
-
-        dict_objects['name1'] = DLSExptsClass()
-        DLSExptsClass.expt_name = "my experiment"
-        DLSExptsClass.Rh_nm = 52.5
-
-        print(dict_objects['name1'].expt_name)
-        print(dict_objects['name1'].Rh_nm)
-
