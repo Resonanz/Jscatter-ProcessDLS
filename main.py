@@ -2,14 +2,14 @@ import jscatter as js
 import numpy as np
 
 FILENAMES_TO_OPEN = [
-    'Liposomes (30mW 1.5mL undiluted)',
-    'Liposomes (40mW 1.5mL 1-1 diluted)',
-    'Liposomes (60mW 2.25mL 1-2 diluted)',
-    'Liposomes (60mW 3mL 1-3 diluted)',
-    'Liposomes (60mW 3.75mL 1-4 diluted)',
-    'Liposomes (100mW 1.65mL 1-9 diluted)',
-    'Liposomes (200mW 3.3mL 1-19 diluted)',
-    'Liposomes (200mW 4.1mL 1-24 diluted)'
+    'Liposomes (30mW 1.5mL undiluted)'#,
+   # 'Liposomes (40mW 1.5mL 1-1 diluted)',
+   # 'Liposomes (60mW 2.25mL 1-2 diluted)',
+   # 'Liposomes (60mW 3mL 1-3 diluted)',
+   # 'Liposomes (60mW 3.75mL 1-4 diluted)',
+   # 'Liposomes (100mW 1.65mL 1-9 diluted)',
+   # 'Liposomes (200mW 3.3mL 1-19 diluted)',
+   # 'Liposomes (200mW 4.1mL 1-24 diluted)' 
 ]
 
 FILENAME_PATH = 'data/'
@@ -18,7 +18,7 @@ FILENAME_CSV_EXTENSION = '.csv'
 CLEANED = ' (cleaned)'
 G1_VS_GAMMA = ' (g1 vs gamma)'
 G1_VS_TAU = ' (g1 vs tau)'
-
+PRH_RH = ' (Prob Rh vs Rh)'
 
 NOISEY_LINES = 100  # Noisey lines of data at start of text file
 
@@ -75,7 +75,9 @@ def write_cleaned_correlator_text_file(filename, text):
     with open(filename, 'w') as file:
         file.write(text)
 
-
+'''
+This next block of code is mostly lifted from the Jscatter demo code DLS example.
+'''
 def do_contin_fitting(text):
     t = js.loglist(1, 10000, 1000)  # times in microseconds
     q = 4 * np.pi / 1.333 / 632 * np.sin(np.pi / 2)  # 90 degrees for 632 nm , unit is 1/nm**2
@@ -83,8 +85,8 @@ def do_contin_fitting(text):
     gamma = q*q*D
     print(np.sin(np.pi/2))
     noise = 0.0001  # typical < 1e-3
-    #data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
-    data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
+    data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
+    #data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
     # add attributes to overwrite defaults
     data.Angle = 90  # scattering angle in degrees
     data.Temperature = 293  # Temperature of measurement  in K
@@ -93,13 +95,14 @@ def do_contin_fitting(text):
     data.Wavelength = 632  # wavelength
     # do CONTIN
     dr = js.dls.contin(data, distribution='x')  # also use r
-
+    #bf = dr[0].contin_bestFit
+    #print(bf[3])
     #print(dr.contin_bestFit[0].ipeaks)  # contains the 11 contin_bestFit.peaks results, but in three lists???
 
     #print(dr[0].contin_bestFit)
     #print(dr[0].contin_bestFit.ipeaks_name)
 
-    js.dls.contin_display(dr)  # display overview
+    #js.dls.contin_display(dr)  # display overview
     return dr
 
 
@@ -132,6 +135,28 @@ def write_g1_vs_tau_plot_data(filename, dr0):
         file.write(csv_to_write)
 
 
+""" 
+Rh = hydrodynamic radius
+PRh = probability of hydrodynamic radius
+
+"""
+def write_intensity_weight_plot_data(filename, Rh_data, prob_intensity_weight_data, prob_mass_weight_data, prob_number_weight_data):
+    csv_to_write = 'Rh, P(Rh) Intensity Weight, P(Rh) Mass Weight, P(Rh) Number Weight, \n'
+
+    for r in range(len(Rh_data)):
+        csv_to_write += str(Rh_data[r])
+        csv_to_write += ','
+        csv_to_write += str(prob_intensity_weight_data[r])
+        csv_to_write += ','
+        csv_to_write += str(prob_mass_weight_data[r])
+        csv_to_write += ','
+        csv_to_write += str(prob_number_weight_data[r])
+        csv_to_write += '\n'
+
+    with open(filename, 'w') as file:
+        file.write(csv_to_write)
+
+
 if __name__ == '__main__':
 
     for filename_to_open in FILENAMES_TO_OPEN:
@@ -145,3 +170,12 @@ if __name__ == '__main__':
         write_g1_vs_gamma_plot_data(FILENAME_PATH + filename_to_open + G1_VS_GAMMA + FILENAME_CSV_EXTENSION, dr.contin_bestFit[0].X, dr.contin_bestFit[0].Y)
         write_g1_vs_tau_plot_data(FILENAME_PATH + filename_to_open + G1_VS_TAU + FILENAME_CSV_EXTENSION, dr[0])
         
+        bf = dr[0].contin_bestFit
+        
+        write_intensity_weight_plot_data(FILENAME_PATH + filename_to_open + PRH_RH + FILENAME_CSV_EXTENSION, bf[3], bf[1], bf[4], bf[5])
+
+        print("Rh from Contin: ")
+        print(dr[0].contin_bestFit.ipeaks_name)
+        print(dr[0].contin_bestFit.ipeaks)
+        print(dr[0].contin_bestFit.ipeaks[0,2]/dr[0].contin_bestFit.ipeaks[0,1])
+
