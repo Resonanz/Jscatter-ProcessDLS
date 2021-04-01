@@ -3,11 +3,11 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-LASER_WAVELENGTH = 632 #530
+LASER_WAVELENGTH = 530 #632
 
 FILENAMES_TO_OPEN = [
-    'Liposomes (30mW 1.5mL undiluted)'#,
-   # 'Liposomes (40mW 1.5mL 1-1 diluted)',
+   # 'Liposomes (30mW 1.5mL undiluted)'#,
+    'Liposomes (40mW 1.5mL 1-1 diluted)'#,
    # 'Liposomes (60mW 2.25mL 1-2 diluted)',
    # 'Liposomes (60mW 3mL 1-3 diluted)',
    # 'Liposomes (60mW 3.75mL 1-4 diluted)',
@@ -24,9 +24,10 @@ G1_VS_GAMMA = ' (g1 vs gamma)'
 G1_VS_TAU = ' (g1 vs tau)'
 PRH_RH = ' (Prob Rh vs Rh)'
 
+# *** FAILURE *** IS PROBABLY CAUSED BY contin returning NAN values during fitting.
 # If NAN appears in the Rh .csv, enlarge the value of NOISEY_LINES.
 # A value of 100 has been observed to produce NAN values.
-NOISEY_LINES = 150  # Noisey lines of data at start of text file
+NOISEY_LINES = 200  # Noisey lines of data at start of text file
 
 search_text_start = '[CorrelationFunction]\n'
 search_text_end = '\n[RawCorrelationFunction]'
@@ -91,8 +92,8 @@ def do_contin_fitting(text):
     gamma = q*q*D
     #print(np.sin(np.pi/2))
     noise = 0.0001  # typical < 1e-3
-    data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
-    #data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
+    #data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
+    data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
     # add attributes to overwrite defaults
     data.Angle = 90  # scattering angle in degrees
     data.Temperature = 293  # Temperature of measurement  in K
@@ -193,13 +194,8 @@ if __name__ == '__main__':
         
         bf = dr[0].contin_bestFit
         
+        # Write composite csv file
         write_intensity_weight_plot_data(FILENAME_PATH + filename_to_open + PRH_RH + FILENAME_CSV_EXTENSION, bf[3], bf[1], bf[4], bf[5])
-
-        print("Rh from Contin: ")
-        print(dr[0].contin_bestFit.ipeaks_name)
-        print(dr[0].contin_bestFit.ipeaks)
-        print(dr[0].contin_bestFit.ipeaks[0,2]/dr[0].contin_bestFit.ipeaks[0,1])
-
 
         # Create a dictionary of objects to store class instances
         # Key = experiment name
@@ -207,6 +203,8 @@ if __name__ == '__main__':
         dict_objects = {}
 
         # Add data from Jscatter output into the storage class instance 
+        # Names are store in dr[0].contin_bestFit.ipeaks_name
+        # Values are stored in dr[0].contin_bestFit.ipeaks
         dict_objects[filename_to_open] = DLSExptsClass()  # Create class instance
         DLSExptsClass.weight = dr[0].contin_bestFit.ipeaks[0,0]            # weight peak weight
         DLSExptsClass.mean = dr[0].contin_bestFit.ipeaks[0,1]              # mean peak mean
@@ -220,15 +218,15 @@ if __name__ == '__main__':
         DLSExptsClass.Rh_nm = dr[0].contin_bestFit.ipeaks[0,9]             # Rh hydrodynamic radius in nm
         DLSExptsClass.wavevector_nm = dr[0].contin_bestFit.ipeaks[0,10]    # q wavevector in 1/nm
         DLSExptsClass.expt_name = filename_to_open
-        DLSExptsClass.bf1 = bf[1]
-        DLSExptsClass.bf3 = bf[3]
-        DLSExptsClass.bf4 = bf[4]
-        DLSExptsClass.bf5 = bf[5]
-        DLSExptsClass.bfX = bf.X
-        DLSExptsClass.bfY = bf.Y
+        DLSExptsClass.bf1 = bf[1]                                          # intensity weight
+        DLSExptsClass.bf3 = bf[3]                                          # x-axis
+        DLSExptsClass.bf4 = bf[4]                                          # mass weight
+        DLSExptsClass.bf5 = bf[5]                                          # number weight
+        DLSExptsClass.bfX = bf.X                                           # Relaxation time distribution
+        DLSExptsClass.bfY = bf.Y                                           # Relaxation time distribution
 
 
-        # Get data from Jscatter
+        # Get data from class storage object
         x = dict_objects[filename_to_open].bf3  # 
         y1 = dict_objects[filename_to_open].bf1 # intensity weight
         y2 = dict_objects[filename_to_open].bf4 # mass weight
@@ -248,12 +246,12 @@ if __name__ == '__main__':
         plt.plot(x,y3, label='Number weight')
 
         plt.title(filename_to_open)
-        plt.xlabel("Rh")
+        plt.xlabel("Rh (cm)")
         plt.ylabel("P(Rh)")
 
         # Create empty plot with blank marker containing the extra label
         plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
-        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_cm))
+        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_cm) + " (cm)")
         #plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
 
         # call with no parameters
