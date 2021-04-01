@@ -24,7 +24,7 @@ G1_VS_GAMMA = ' (g1 vs gamma)'
 G1_VS_TAU = ' (g1 vs tau)'
 PRH_RH = ' (Prob Rh vs Rh)'
 
-# *** FAILURE *** IS PROBABLY CAUSED BY contin returning NAN values during fitting.
+# *** FAILURE *** IS PROBABLY CAUSED BY CONTIN returning NAN values during fitting.
 # If NAN appears in the Rh .csv, enlarge the value of NOISEY_LINES.
 # A value of 100 has been observed to produce NAN values.
 NOISEY_LINES = 200  # Noisey lines of data at start of text file
