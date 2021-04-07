@@ -5,15 +5,17 @@ import matplotlib.pyplot as plt
 
 LASER_WAVELENGTH = 532 #632
 
+# The filenames below refer to .SIN files, exported from the correlator app.
 FILENAMES_TO_OPEN = [
-    'Liposomes (30mW 1.5mL undiluted)'#,
-    #'Liposomes (40mW 1.5mL 1-1 diluted)'#,
+    #'ANFF Liposomes (1st attempt)',
+    #'Liposomes (30mW 1.5mL undiluted)'#,
+   # 'Liposomes (40mW 1.5mL 1-1 diluted)'#,
    # 'Liposomes (60mW 2.25mL 1-2 diluted)',
    # 'Liposomes (60mW 3mL 1-3 diluted)',
-   # 'Liposomes (60mW 3.75mL 1-4 diluted)',
+    #'Liposomes (60mW 3.75mL 1-4 diluted)',
    # 'Liposomes (100mW 1.65mL 1-9 diluted)',
-   # 'Liposomes (200mW 3.3mL 1-19 diluted)',
-   # 'Liposomes (200mW 4.1mL 1-24 diluted)' 
+    #'Liposomes (200mW 3.3mL 1-19 diluted)',
+    #'Liposomes (200mW 4.1mL 1-24 diluted)' 
 ]
 
 FILENAME_PATH = 'data/'
@@ -27,7 +29,7 @@ PRH_RH = ' (Prob Rh vs Rh)'
 # *** FAILURE *** IS PROBABLY CAUSED BY CONTIN returning NAN values during fitting.
 # If NAN appears in the Rh .csv, enlarge the value of NOISEY_LINES.
 # A value of 100 has been observed to produce NAN values.
-NOISEY_LINES = 150  # Noisey lines of data at start of text file
+NOISEY_LINES = 100  # Noisey lines of data at start of text file
 
 search_text_start = '[CorrelationFunction]\n'
 search_text_end = '\n[RawCorrelationFunction]'
@@ -44,14 +46,15 @@ def trim_correlator_text_file(text):
     return text[idx_start:idx_end]
 
 
-def average_two_data_columns_and_fix_time_microsec(text):
+def average_two_data_columns_and_fix_time_microsec(text, noisey):
     averaged_data = ''
     noisey_data_delete_line_counter = 0
 
     line = text.split('\n')  # Split into lines using \n
     for l in line:
 
-        if (noisey_data_delete_line_counter < NOISEY_LINES):
+#        if (noisey_data_delete_line_counter < NOISEY_LINES):
+        if (noisey_data_delete_line_counter < noisey):
             noisey_data_delete_line_counter += 1
             continue
 
@@ -182,79 +185,89 @@ if __name__ == '__main__':
 
     for filename_to_open in FILENAMES_TO_OPEN:
 
-        file_text = read_correlator_text_file(FILENAME_PATH + filename_to_open + FILENAME_SIN_EXTENSION)
-        new_text = trim_correlator_text_file(file_text)
-        new_text = average_two_data_columns_and_fix_time_microsec(new_text)
-        write_cleaned_correlator_text_file(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION, new_text)
-
-        dr = do_contin_fitting(new_text)
-        write_g1_vs_gamma_plot_data(FILENAME_PATH + filename_to_open + G1_VS_GAMMA + FILENAME_CSV_EXTENSION, dr.contin_bestFit[0].X, dr.contin_bestFit[0].Y)
-        write_g1_vs_tau_plot_data(FILENAME_PATH + filename_to_open + G1_VS_TAU + FILENAME_CSV_EXTENSION, dr[0])
+        NOISEY_LINES_array = [10,20,30,40,50,60,70,80,90,100]
+        peak = []
         
-        bf = dr[0].contin_bestFit
-        
-        # Write composite csv file
-        write_intensity_weight_plot_data(FILENAME_PATH + filename_to_open + PRH_RH + FILENAME_CSV_EXTENSION, bf[3], bf[1], bf[4], bf[5])
+        for n in NOISEY_LINES_array:
 
-        # Create a dictionary of objects to store class instances
-        # Key = experiment name
-        # Value = class instance 
-        dict_objects = {}
+            file_text = read_correlator_text_file(FILENAME_PATH + filename_to_open + FILENAME_SIN_EXTENSION)
+            new_text = trim_correlator_text_file(file_text)
+            new_text = average_two_data_columns_and_fix_time_microsec(new_text, n)
+            write_cleaned_correlator_text_file(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION, new_text)
 
-        # Add data from Jscatter output into the storage class instance 
-        # Names are store in dr[0].contin_bestFit.ipeaks_name
-        # Values are stored in dr[0].contin_bestFit.ipeaks
-        dict_objects[filename_to_open] = DLSExptsClass()  # Create class instance
-        DLSExptsClass.weight = dr[0].contin_bestFit.ipeaks[0,0]            # weight peak weight
-        DLSExptsClass.mean = dr[0].contin_bestFit.ipeaks[0,1]              # mean peak mean
-        DLSExptsClass.std = dr[0].contin_bestFit.ipeaks[0,2]               # std peak standard deviation
-        DLSExptsClass.mean_err = dr[0].contin_bestFit.ipeaks[0,3]          # mean_err error of mean
-        DLSExptsClass.imean = dr[0].contin_bestFit.ipeaks[0,4]             # imean index of peak mean
-        DLSExptsClass.mean_Deff = dr[0].contin_bestFit.ipeaks[0,5]         # 1/(q**2*mean) diffusion constant in cm**2/s
-        DLSExptsClass.Rh_cm = dr[0].contin_bestFit.ipeaks[0,6]             # Rh hydrodynamic radius in cm
-        DLSExptsClass.wavevector = dr[0].contin_bestFit.ipeaks[0,7]        # q wavevector in 1/cm
-        DLSExptsClass.mean_Deff_nmns = dr[0].contin_bestFit.ipeaks[0,8]    # 1/(q**2*mean) diffusion constant in nm**2/ns
-        DLSExptsClass.Rh_nm = dr[0].contin_bestFit.ipeaks[0,9]             # Rh hydrodynamic radius in nm
-        DLSExptsClass.wavevector_nm = dr[0].contin_bestFit.ipeaks[0,10]    # q wavevector in 1/nm
-        DLSExptsClass.expt_name = filename_to_open
-        DLSExptsClass.bf1 = bf[1]                                          # intensity weight
-        DLSExptsClass.bf3 = bf[3]                                          # x-axis
-        DLSExptsClass.bf4 = bf[4]                                          # mass weight
-        DLSExptsClass.bf5 = bf[5]                                          # number weight
-        DLSExptsClass.bfX = bf.X                                           # Relaxation time distribution
-        DLSExptsClass.bfY = bf.Y                                           # Relaxation time distribution
+            dr = do_contin_fitting(new_text)
+            write_g1_vs_gamma_plot_data(FILENAME_PATH + filename_to_open + G1_VS_GAMMA + FILENAME_CSV_EXTENSION, dr.contin_bestFit[0].X, dr.contin_bestFit[0].Y)
+            write_g1_vs_tau_plot_data(FILENAME_PATH + filename_to_open + G1_VS_TAU + FILENAME_CSV_EXTENSION, dr[0])
+            
+            bf = dr[0].contin_bestFit
+            
+            # Write composite csv file
+            write_intensity_weight_plot_data(FILENAME_PATH + filename_to_open + PRH_RH + FILENAME_CSV_EXTENSION, bf[3], bf[1], bf[4], bf[5])
+
+            # Create a dictionary of objects to store class instances
+            # Key = experiment name
+            # Value = class instance 
+            dict_objects = {}
+
+            # Add data from Jscatter output into the storage class instance 
+            # Names are store in dr[0].contin_bestFit.ipeaks_name
+            # Values are stored in dr[0].contin_bestFit.ipeaks
+            dict_objects[filename_to_open] = DLSExptsClass()  # Create class instance
+            DLSExptsClass.weight = dr[0].contin_bestFit.ipeaks[0,0]            # weight peak weight
+            DLSExptsClass.mean = dr[0].contin_bestFit.ipeaks[0,1]              # mean peak mean
+            DLSExptsClass.std = dr[0].contin_bestFit.ipeaks[0,2]               # std peak standard deviation
+            DLSExptsClass.mean_err = dr[0].contin_bestFit.ipeaks[0,3]          # mean_err error of mean
+            DLSExptsClass.imean = dr[0].contin_bestFit.ipeaks[0,4]             # imean index of peak mean
+            DLSExptsClass.mean_Deff = dr[0].contin_bestFit.ipeaks[0,5]         # 1/(q**2*mean) diffusion constant in cm**2/s
+            DLSExptsClass.Rh_cm = dr[0].contin_bestFit.ipeaks[0,6]             # Rh hydrodynamic radius in cm
+            DLSExptsClass.wavevector = dr[0].contin_bestFit.ipeaks[0,7]        # q wavevector in 1/cm
+            DLSExptsClass.mean_Deff_nmns = dr[0].contin_bestFit.ipeaks[0,8]    # 1/(q**2*mean) diffusion constant in nm**2/ns
+            DLSExptsClass.Rh_nm = dr[0].contin_bestFit.ipeaks[0,9]             # Rh hydrodynamic radius in nm
+            DLSExptsClass.wavevector_nm = dr[0].contin_bestFit.ipeaks[0,10]    # q wavevector in 1/nm
+            DLSExptsClass.expt_name = filename_to_open
+            DLSExptsClass.bf1 = bf[1]                                          # intensity weight
+            DLSExptsClass.bf3 = bf[3]                                          # x-axis
+            DLSExptsClass.bf4 = bf[4]                                          # mass weight
+            DLSExptsClass.bf5 = bf[5]                                          # number weight
+            DLSExptsClass.bfX = bf.X                                           # Relaxation time distribution
+            DLSExptsClass.bfY = bf.Y                                           # Relaxation time distribution
 
 
-        # Get data from class storage object
-        x = dict_objects[filename_to_open].bf3  # 
-        y1 = dict_objects[filename_to_open].bf1 # intensity weight
-        y2 = dict_objects[filename_to_open].bf4 # mass weight
-        y3 = dict_objects[filename_to_open].bf5 # number weight
+            # Get data from class storage object
+            x = dict_objects[filename_to_open].bf3  # 
+            y1 = dict_objects[filename_to_open].bf1 # intensity weight
+            y2 = dict_objects[filename_to_open].bf4 # mass weight
+            y3 = dict_objects[filename_to_open].bf5 # number weight
 
-        # Convert from lists to to numpy arrays for plotting 
-        x = np.asarray(x, dtype=np.float64)
-        y1 = np.asarray(y1, dtype=np.float64)
-        y2 = np.asarray(y2, dtype=np.float64)
-        y3 = np.asarray(y3, dtype=np.float64)
-        
-        plt.xscale('log', base=10)
+            # Convert from lists to to numpy arrays for plotting 
+            x = np.asarray(x, dtype=np.float64)
+            y1 = np.asarray(y1, dtype=np.float64)
+            y2 = np.asarray(y2, dtype=np.float64)
+            y3 = np.asarray(y3, dtype=np.float64)
+            
+            plt.xscale('log', base=10)
 
-        # plot the 3 sets
-        plt.plot(x,y1, label='Intensity weight')
-        plt.plot(x,y2, label='Mass weight')
-        plt.plot(x,y3, label='Number weight')
+            # plot the 3 sets
+            plt.plot(x,y1, label='Intensity weight')
+            plt.plot(x,y2, label='Mass weight')
+            plt.plot(x,y3, label='Number weight')
 
-        plt.title(filename_to_open)
-        plt.xlabel("Rh (cm)")
-        plt.ylabel("P(Rh)")
+            plt.title(filename_to_open)
+            plt.xlabel("Rh (cm)")
+            plt.ylabel("P(Rh)")
 
-        # Create empty plot with blank marker containing the extra label
-        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
-        plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_cm) + " (cm)")
-        #plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
+            # Create empty plot with blank marker containing the extra label
+            plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
+            plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_cm) + " (cm)")
+            #plt.plot([], [], ' ', label="Rh = " + str(dict_objects[filename_to_open].Rh_nm) + " (nm)")
 
-        # call with no parameters
-        plt.legend()
+            # call with no parameters
+            plt.legend()
 
-        plt.savefig(FILENAME_PATH + filename_to_open + PRH_RH + ".pdf")
-        plt.show()
+            plt.savefig(FILENAME_PATH + filename_to_open + PRH_RH + ".pdf")
+            #plt.show()
+
+            peak.append(dict_objects[filename_to_open].Rh_nm)
+
+        for p in peak:
+            print(p)
