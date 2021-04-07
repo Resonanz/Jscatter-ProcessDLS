@@ -3,7 +3,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-LASER_WAVELENGTH = 530 #632
+LASER_WAVELENGTH = 532 #632
 
 FILENAMES_TO_OPEN = [
    # 'Liposomes (30mW 1.5mL undiluted)'#,
@@ -27,7 +27,7 @@ PRH_RH = ' (Prob Rh vs Rh)'
 # *** FAILURE *** IS PROBABLY CAUSED BY contin returning NAN values during fitting.
 # If NAN appears in the Rh .csv, enlarge the value of NOISEY_LINES.
 # A value of 100 has been observed to produce NAN values.
-NOISEY_LINES = 200  # Noisey lines of data at start of text file
+NOISEY_LINES = 150  # Noisey lines of data at start of text file
 
 search_text_start = '[CorrelationFunction]\n'
 search_text_end = '\n[RawCorrelationFunction]'
