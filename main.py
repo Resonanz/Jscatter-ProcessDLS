@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 LASER_WAVELENGTH = 532 #632
 
 FILENAMES_TO_OPEN = [
-   # 'Liposomes (30mW 1.5mL undiluted)'#,
-    'Liposomes (40mW 1.5mL 1-1 diluted)'#,
+    'Liposomes (30mW 1.5mL undiluted)'#,
+    #'Liposomes (40mW 1.5mL 1-1 diluted)'#,
    # 'Liposomes (60mW 2.25mL 1-2 diluted)',
    # 'Liposomes (60mW 3mL 1-3 diluted)',
    # 'Liposomes (60mW 3.75mL 1-4 diluted)',
@@ -24,7 +24,7 @@ G1_VS_GAMMA = ' (g1 vs gamma)'
 G1_VS_TAU = ' (g1 vs tau)'
 PRH_RH = ' (Prob Rh vs Rh)'
 
-# *** FAILURE *** IS PROBABLY CAUSED BY contin returning NAN values during fitting.
+# *** FAILURE *** IS PROBABLY CAUSED BY CONTIN returning NAN values during fitting.
 # If NAN appears in the Rh .csv, enlarge the value of NOISEY_LINES.
 # A value of 100 has been observed to produce NAN values.
 NOISEY_LINES = 150  # Noisey lines of data at start of text file
@@ -44,7 +44,7 @@ def trim_correlator_text_file(text):
     return text[idx_start:idx_end]
 
 
-def average_two_data_columns(text):
+def average_two_data_columns_and_fix_time_microsec(text):
     averaged_data = ''
     noisey_data_delete_line_counter = 0
 
@@ -57,7 +57,7 @@ def average_two_data_columns(text):
 
         try:
             values = l.split('\t')  # Split each line into 3 using \t
-            abscissa_value = (float(values[0]))
+            abscissa_value = (float(values[0]) * 1E6)  # CONTIN works in seconds; correlator outputs in microseconds, so convert
             ordinate_value = ( float(values[1]) + float(values[2]) ) / 2
 
             # Correlator s/w seems to produce a lot of zero ordinate values at the end of the file, so ignore
@@ -86,12 +86,12 @@ def write_cleaned_correlator_text_file(filename, text):
 This next block of code is mostly lifted from the Jscatter demo code DLS example.
 '''
 def do_contin_fitting(text):
-    t = js.loglist(1, 10000, 1000)  # times in microseconds
-    q = 4 * np.pi / 1.333 / LASER_WAVELENGTH * np.sin(np.pi / 2)  # 90 degrees for 632 nm , unit is 1/nm**2
-    D = 0.05 * 1000  # nm**2/ns * 1000 = units nm**2/microseconds
-    gamma = q*q*D
+    #t = js.loglist(1, 10000, 1000)  # times in microseconds
+    #q = 4 * np.pi / 1.333 / LASER_WAVELENGTH * np.sin(np.pi / 2)  # 90 degrees for 632 nm , unit is 1/nm**2
+    #D = 0.05 * 1000  # nm**2/ns * 1000 = units nm**2/microseconds
+    #gamma = q*q*D
     #print(np.sin(np.pi/2))
-    noise = 0.0001  # typical < 1e-3
+    #noise = 0.0001  # typical < 1e-3
     #data = js.dA(np.c_[t, 0.95 * np.exp(-q ** 2 * D * t) + noise * np.random.randn(len(t))].T)
     data = js.dA(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION)
     # add attributes to overwrite defaults
@@ -138,7 +138,6 @@ def write_g1_vs_tau_plot_data(filename, dr0):
 """ 
 Rh = hydrodynamic radius
 PRh = probability of hydrodynamic radius
-
 """
 def write_intensity_weight_plot_data(filename, Rh_data, prob_intensity_weight_data, prob_mass_weight_data, prob_number_weight_data):
     csv_to_write = 'Rh, P(Rh) Intensity Weight, P(Rh) Mass Weight, P(Rh) Number Weight, \n'
@@ -185,7 +184,7 @@ if __name__ == '__main__':
 
         file_text = read_correlator_text_file(FILENAME_PATH + filename_to_open + FILENAME_SIN_EXTENSION)
         new_text = trim_correlator_text_file(file_text)
-        new_text = average_two_data_columns(new_text)
+        new_text = average_two_data_columns_and_fix_time_microsec(new_text)
         write_cleaned_correlator_text_file(FILENAME_PATH + filename_to_open + CLEANED + FILENAME_SIN_EXTENSION, new_text)
 
         dr = do_contin_fitting(new_text)
