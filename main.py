@@ -7,6 +7,7 @@ LASER_WAVELENGTH = 532 #632
 
 # The filenames below refer to .SIN files, exported from the correlator app.
 FILENAMES_TO_OPEN = [
+    'ANFF Liposomes (1st attempt undiluted)',
     #'ANFF Liposomes (1st attempt)',
     #'Liposomes (30mW 1.5mL undiluted)'#,
    # 'Liposomes (40mW 1.5mL 1-1 diluted)'#,
@@ -185,7 +186,7 @@ if __name__ == '__main__':
 
     for filename_to_open in FILENAMES_TO_OPEN:
 
-        NOISEY_LINES_array = [10,20,30,40,50,60,70,80,90,100]
+        NOISEY_LINES_array = [0,10,20,30,40,50,60,70,80,90,100]
         peak = []
         
         for n in NOISEY_LINES_array:
@@ -249,8 +250,8 @@ if __name__ == '__main__':
 
             # plot the 3 sets
             plt.plot(x,y1, label='Intensity weight')
-            plt.plot(x,y2, label='Mass weight')
-            plt.plot(x,y3, label='Number weight')
+            #plt.plot(x,y2, label='Mass weight')
+            #plt.plot(x,y3, label='Number weight')
 
             plt.title(filename_to_open)
             plt.xlabel("Rh (cm)")
